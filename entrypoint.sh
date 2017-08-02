@@ -9,34 +9,39 @@ post() {
 	local JSON=$1
 	local ENDPOINT=$2
 
-	curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer $DO_TOKEN" -d $JSON "https://api.digitalocean.com/v2/$ENDPOINT"
+	curl -sSX POST -H "Content-Type: application/json" -H "Authorization: Bearer $DO_TOKEN" -d $JSON "https://api.digitalocean.com/v2/$ENDPOINT"
 }
 
 get() {
 	local ENDPOINT=$1
 
-	curl -H "Authorization: Bearer $DO_TOKEN" "https://api.digitalocean.com/v2/$ENDPOINT"
+	curl -sSH "Authorization: Bearer $DO_TOKEN" "https://api.digitalocean.com/v2/$ENDPOINT"
 }
 
 delete() {
 	local ENDPOINT=$1
 
-	curl -X DELETE -H "Content-Type: application/json" -H "Authorization: Bearer $DO_TOKEN" "https://api.digitalocean.com/v2/$ENDPOINT"
+	curl -sSX DELETE -H "Content-Type: application/json" -H "Authorization: Bearer $DO_TOKEN" "https://api.digitalocean.com/v2/$ENDPOINT"
 }
 
 # Get volume id to copy using it's name
 VOLUME_ID=$(get "volumes?name=$VOLUME_NAME&region=$REGION" | jq -r ".volumes[0].id")
+echo "Got volume $VOLUME_NAME: $VOLUME_ID"
 
 # Create snapshot and retreive its id
 SNAPSHOT_ID=$(post "{\"name\":\"$VOLUME_COPY_NAME\"}" "volumes/$VOLUME_ID/snapshots" | jq -r ".snapshot.id")
+echo "Created snapshot $SNAPSHOT_ID"
 
 # Delete old staging volume copy
 delete "volumes?name=$VOLUME_COPY_NAME&region=$REGION"
+echo "Deleted old volume $VOLUME_COPY_NAME"
 
 # Create staging volume from production snapshot
 post "{\"name\":\"$VOLUME_COPY_NAME\",\"snapshot_id\":\"$SNAPSHOT_ID\"}" "volumes"
+echo "Created copied volume from snapshot"
 
 # Delete snapshot
 delete "snapshots/$SNAPSHOT_ID"
+echo "Deleted snapshot"
 
 # TODO: Check that each stage was completed...

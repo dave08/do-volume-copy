@@ -32,6 +32,10 @@ echo "Got volume $VOLUME_NAME: $VOLUME_ID"
 SNAPSHOT_ID=$(post "{\"name\":\"$VOLUME_COPY_NAME\"}" "volumes/$VOLUME_ID/snapshots" | jq -r ".snapshot.id")
 echo "Created snapshot $SNAPSHOT_ID"
 
+# Detach old staging volume
+DROPLET_ATTACHED=$(get "volumes?name=$VOLUME_COPY_NAME&region=$REGION" | jq ".volumes[0].droplet_ids[0]")
+post "{\"type\":\"detach\",\"droplet_id\":$DROPLET_ATTACHED,\"volume_name\":\"$VOLUME_COPY_NAME\",\"region\":\"fra1\"}" "volumes/actions"
+
 # Delete old staging volume copy
 delete "volumes?name=$VOLUME_COPY_NAME&region=$REGION"
 echo "Deleted old volume $VOLUME_COPY_NAME"
